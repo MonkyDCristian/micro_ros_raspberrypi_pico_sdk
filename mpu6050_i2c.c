@@ -32,10 +32,17 @@
 
 // By default these devices  are on bus address 0x68
 static int mpu_addr = 0x68;
-int16_t accel[3];
-float gyro[3];
-float accAngleX, accAngleY;
-float elapsedTime, currentTime, previousTime;
+
+static int16_t accel[3];
+static float accAngleX, accAngleY;
+
+static int16_t gyro[3];
+static float GyroAngleX, GyroAngleY;
+
+static float AccError[2], GyroError[2]; // X-Y-Z axis
+
+static float elapsedTime = 0.1; // currentTime, previousTime;
+
 
 void mpu6050_setup(){
     // This example will use I2C0 on the default SDA and SCL pins (4, 5 on a Pico)
@@ -48,6 +55,7 @@ void mpu6050_setup(){
     bi_decl(bi_2pins_with_func(PICO_I2C_SDA_PIN, PICO_I2C_SCL_PIN, GPIO_FUNC_I2C));
 
     mpu6050_reset();
+    mpu6050_get_error();
 }
 
 void mpu6050_reset(){
@@ -74,13 +82,8 @@ void mpu6050_read_raw(float *roll, float *pitch){
     }
 
     // Calculating Roll and Pitch angles from the accelerometer data
-    accAngleX = (atan(accel[1] / sqrt(pow(accel[0], 2) + pow(accel[2], 2))) * 180 / M_PI);
-    accAngleY = (atan(-1 * accel[0] / sqrt(pow(accel[1], 2) + pow(accel[2], 2))) * 180 / M_PI);
-
-    // getting elapsed time
-    previousTime = currentTime;           // Previous time is stored before the actual time read
-    currentTime = time_us_64() / 1000000; // Current time actual time read
-    elapsedTime = (float)(currentTime - previousTime);
+    accAngleX = atan(accel[1] / sqrt(pow(accel[0], 2) + pow(accel[2], 2)));//- AccError[0];
+    accAngleY = atan(-1 * accel[0] / sqrt(pow(accel[1], 2) + pow(accel[2], 2)));// - AccError[1];
     
     // Now gyro data from reg 0x43 for 6 bytes
     // The register is auto incrementing on each read
@@ -89,12 +92,64 @@ void mpu6050_read_raw(float *roll, float *pitch){
     i2c_read_blocking(i2c_default, mpu_addr, buffer, 6, false);  // False - finished with bus
 
     for (int i = 0; i < 3; i++) {
-        gyro[i] = (buffer[i * 2] << 8 | buffer[(i * 2) + 1]) / 131.0; // For a 250deg/s range we have to divide first the raw value by 131.0, according to the datasheet
+        gyro[i] = (buffer[i * 2] << 8 | buffer[(i * 2) + 1]); 
     }
-
+    
+    GyroAngleX = (gyro[0] / 131.0) * (M_PI / 180) - GyroError[0]; // For a 250deg/s range we have to divide first the raw value by 131.0, according to the datasheet GyroError[0]; // We subtract the initial error values
+    GyroAngleY = (gyro[1] / 131.0) * (M_PI / 180) - GyroError[1]; // We subtract the initial error values
+    
     // Currently the raw values are in degrees per seconds, deg/s, so we need to multiply by sendonds (s) to get the angle in degrees
     // Complementary filter - combine acceleromter and gyro angle values
-    *roll = 0.96 * (*roll + gyro[0] * elapsedTime) + 0.04 * accAngleX;
-    *pitch = 0.96 * (*pitch + gyro[1] * elapsedTime) + 0.04 * accAngleY;
+    *roll = 0.96 * (*roll + GyroAngleX * elapsedTime) + 0.04 * accAngleX;
+    *pitch = 0.96 * (*pitch + GyroAngleY * elapsedTime) + 0.04 * accAngleY;
+}
+
+void mpu6050_get_error() {
+  // We can call this funtion in the setup section to calculate the accelerometer and gyro data error. From here we will get the error values used in the above equations printed on the Serial Monitor.
+  // Note that we should place the IMU flat in order to get the proper values, so that we then can the correct values
+  // Read accelerometer values 200 times
+  
+  uint8_t buffer[6]; 
+  uint8_t val;
+  int c = 0;
+
+  while (c < 200) {
+    val = 0x3B;
+    i2c_write_blocking(i2c_default, mpu_addr, &val, 1, true); // true to keep master control of bus
+    i2c_read_blocking(i2c_default, mpu_addr, buffer, 6, false);
+
+    for (int i = 0; i < 3; i++) {
+        accel[i] = (buffer[i * 2] << 8 | buffer[(i * 2) + 1]) ; // X-Y-Z axis value
+    }
+    AccError[0] += atan((accel[1]) / sqrt(pow((accel[0]), 2) + pow((accel[2]), 2)));
+    AccError[1] += atan(-1 * (accel[0]) / sqrt(pow((accel[1]), 2) + pow((accel[2]), 2)));
+    
+    c++;
+  }
+ 
+  //Divide the sum by 200 to get the error value
+  AccError[0] = AccError[0] / 200;
+  AccError[1] = AccError[1] / 200;
+  c = 0;
+
+  // Read gyro values 200 times
+  while (c < 200) {
+    // Now gyro data from reg 0x43 for 6 bytes
+    // The register is auto incrementing on each read
+    val = 0x43;
+    i2c_write_blocking(i2c_default, mpu_addr, &val, 1, true);
+    i2c_read_blocking(i2c_default, mpu_addr, buffer, 6, false);  // False - finished with bus
+
+    for (int i = 0; i < 3; i++) {
+        gyro[i] = (buffer[i * 2] << 8 | buffer[(i * 2) + 1]); // For a 250deg/s range we have to divide first the raw value by 131.0, according to the datasheet
+    }
+    GyroError[0] += (gyro[0] / 131.0) * (M_PI / 180);
+    GyroError[1] += (gyro[1] / 131.0) * (M_PI / 180);
+    c++;
+  }
+
+  //Divide the sum by 200 to get the error value
+  GyroError[0] = GyroError[0] / 200;
+  GyroError[1] = GyroError[1] / 200;
 }
 

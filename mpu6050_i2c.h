@@ -9,3 +9,4 @@
 void mpu6050_setup();
 void mpu6050_reset();
 void mpu6050_read_raw(float *roll, float *pitch);
+void mpu6050_get_error();
