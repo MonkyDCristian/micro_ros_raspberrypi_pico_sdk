@@ -2,10 +2,10 @@
 
 void h_bridge_setup(int IN1, int IN2, int IN3, int IN4)
 {
-    h_bridge_pwm_setup_pin(IN1);
-    h_bridge_pwm_setup_pin(IN2);
-    h_bridge_pwm_setup_pin(IN3);
-    h_bridge_pwm_setup_pin(IN4);
+    h_bridge_setup_pin(IN1);
+    h_bridge_setup_pin(IN2);
+    h_bridge_setup_pin(IN3);
+    h_bridge_setup_pin(IN4);
 }
 
 void h_bridge_setup_pin(int IN)
