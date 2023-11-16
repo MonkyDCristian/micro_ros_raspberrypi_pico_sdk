@@ -2,7 +2,8 @@
 #include "pico/stdlib.h"
 #include "hardware/pwm.h"
 
-#define HBMaxPWM 255
+#define PWM_FREQ 1000  // PWM frequency in Hz
+#define PWM_RANGE 255  // PWM range (8-bit resolution)
 
 #define RIGHT 21, 20 // IN1, IN2 Right motor
 #define LEFT 19, 18  // IN1, IN2 Left motor

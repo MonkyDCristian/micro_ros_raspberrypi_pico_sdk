@@ -14,12 +14,12 @@ add_executable(main
     main.c
     pico_uart_transport.c
     mpu6050_i2c.c
-    h_bridge.c
+    #h_bridge.c
 )
 
 target_link_libraries(main
     pico_stdlib
-    hardware_pwm
+    #hardware_pwm
     hardware_i2c
     microros
 )
