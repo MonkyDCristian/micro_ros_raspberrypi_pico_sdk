@@ -1,4 +1,6 @@
 /*
+Code to read a IMU MPU6050 connected by I2C protocol.
+the accelerometer and tge gyroscopy 
 Terminal1:
     # Find your serial [device name]:
     ls /dev/serial/by-id/*
@@ -14,8 +16,11 @@ Terminal1:
 #include "main.h"
 
 const uint LED_PIN = 25;
-unsigned int num_handles = 1;   //2 sub + 1 timer
+
+const float interpolation = 0.84;
 float roll, pitch;
+
+unsigned int num_handles = 1;   //1 timer
 
 int main()
 {   
@@ -116,8 +121,8 @@ void microros_add_timers(){
 void timer_callback(rcl_timer_t *timer, int64_t last_call_time)
 {
     mpu6050_read_raw(&roll, &pitch);
-    roll_msg.data = roll;
-    pitch_msg.data = pitch;
+    roll_msg.data = roll*interpolation;
+    pitch_msg.data = pitch*interpolation;
     RCCHECK(rcl_publish(&roll_publisher, &roll_msg, NULL));
     RCCHECK(rcl_publish(&pitch_publisher, &pitch_msg, NULL));
 }

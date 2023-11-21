@@ -33,13 +33,13 @@
 // By default these devices  are on bus address 0x68
 static int mpu_addr = 0x68;
 
-static int16_t accel[3];
-static float accAngleX, accAngleY;
+static int16_t accel[3] = {0, 0, 0};
+static float accAngleX = 0, accAngleY = 0;
 
-static int16_t gyro[3];
-static float GyroAngleX, GyroAngleY;
+static int16_t gyro[3] = {0, 0, 0};
+static float GyroAngleX = 0, GyroAngleY = 0;
 
-static float AccError[2], GyroError[2]; // X-Y-Z axis
+static float AccError[2] = {0, 0} , GyroError[2] = {0, 0}; // X-Y-Z axis
 
 static float elapsedTime = 0.1; // currentTime, previousTime;
 
@@ -82,8 +82,8 @@ void mpu6050_read_raw(float *roll, float *pitch){
     }
 
     // Calculating Roll and Pitch angles from the accelerometer data
-    accAngleX = atan(accel[1] / sqrt(pow(accel[0], 2) + pow(accel[2], 2)));//- AccError[0];
-    accAngleY = atan(-1 * accel[0] / sqrt(pow(accel[1], 2) + pow(accel[2], 2)));// - AccError[1];
+    accAngleX = atan2(accel[1], sqrt(pow(accel[0], 2) + pow(accel[2], 2)))- AccError[0];
+    accAngleY = atan2(-1 * accel[0], sqrt(pow(accel[1], 2) + pow(accel[2], 2))) - AccError[1];
     
     // Now gyro data from reg 0x43 for 6 bytes
     // The register is auto incrementing on each read
@@ -121,8 +121,8 @@ void mpu6050_get_error() {
     for (int i = 0; i < 3; i++) {
         accel[i] = (buffer[i * 2] << 8 | buffer[(i * 2) + 1]) ; // X-Y-Z axis value
     }
-    AccError[0] += atan((accel[1]) / sqrt(pow((accel[0]), 2) + pow((accel[2]), 2)));
-    AccError[1] += atan(-1 * (accel[0]) / sqrt(pow((accel[1]), 2) + pow((accel[2]), 2)));
+    AccError[0] += atan2(accel[1], sqrt(pow(accel[0], 2) + pow(accel[2], 2)));
+    AccError[1] += atan2(-1 * accel[0], sqrt(pow(accel[1], 2) + pow(accel[2], 2)));
     
     c++;
   }
@@ -152,4 +152,3 @@ void mpu6050_get_error() {
   GyroError[0] = GyroError[0] / 200;
   GyroError[1] = GyroError[1] / 200;
 }
-
