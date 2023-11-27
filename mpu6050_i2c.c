@@ -40,6 +40,7 @@ static int16_t gyro[3] = {0, 0, 0};
 static float GyroAngleX = 0, GyroAngleY = 0;
 
 static float AccError[2] = {0, 0} , GyroError[2] = {0, 0}; // X-Y-Z axis
+static float accErrorX = -0.006211436819285154, accErrorY = -0.027438277378678322; //calculated values
 
 static float elapsedTime = 0.1; // currentTime, previousTime;
 
@@ -82,8 +83,8 @@ void mpu6050_read_raw(float *roll, float *pitch){
     }
 
     // Calculating Roll and Pitch angles from the accelerometer data
-    accAngleX = atan2(accel[1], sqrt(pow(accel[0], 2) + pow(accel[2], 2)))- AccError[0];
-    accAngleY = atan2(-1 * accel[0], sqrt(pow(accel[1], 2) + pow(accel[2], 2))) - AccError[1];
+    accAngleX = atan2(accel[1], sqrt(pow(accel[0], 2) + pow(accel[2], 2))) - accErrorX; // AccError[0];
+    accAngleY = atan2(-1 * accel[0], sqrt(pow(accel[1], 2) + pow(accel[2], 2))) - accErrorY; // AccError[1];
     
     // Now gyro data from reg 0x43 for 6 bytes
     // The register is auto incrementing on each read
